@@ -3,7 +3,7 @@ Bot for AJOC Cytube Channel
 
 Bot Usage Instructions:
 
-1. Configure bot credentials in config.json:
+1. cd into AjocBot folder and configure config.json:
 
       Cytube username and password fields are login for bot<br>
       socketConnection is the URL you are connecting to (ex: https://zip.cytu.be:10443)<br>
