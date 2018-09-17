@@ -1,0 +1,15 @@
+{
+   "cytube": {
+      "username": "",
+      "password": "",
+      "socketConnection": "",
+      "channel": ""
+   },
+   "gist": {
+      "username": "",
+      "password": "",
+      "fileID": ""
+   },
+   "openweathermapKey": "",
+   "twitchKey": ""
+}   
