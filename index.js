@@ -6,27 +6,9 @@ const parseDuration = require("parse-duration");
 const convert = require('convert-units');
 const Gists = require('gists');
 
-// State of the bot (essentially wraps global variables)
-const state = {
-   count: 0,
-   launchDate: "",
-   currentSongTime: 0,
-   currentWeatherTime: 0,
-   playGame: false,
-   questionNum: 0,
-   currentQuestion: "",
-   currentAnswer: "",
-   questionsLength: 0
-};
-
-// Bot login for cytube and gists
+// Bot login credentials for cytube
 const botname = config.cytube.username;
 const password = config.cytube.password;
-
-const gists = new Gists({
-   username: config.gist.username,
-   password: config.gist.password
-});
 
 // Connecting to Cytube via websocket
 const socket = sc.connect(config.cytube.socketConnection, {
@@ -49,11 +31,9 @@ socket.emit("login", {
 });
 
 // Join message
-socket.on("addUser", (data) => {
-   if (data.name.toLowerCase() === botname) { 
-      chat(botname.substring(0, 1).toUpperCase() + botname.substring(1) + 
-           " reporting for duty deteAlizee");
-   }
+socket.on("login", (data) => {
+   chat(botname.substring(0, 1).toUpperCase() + botname.substring(1) + 
+        " reporting for duty deteAlizee");
 });
 
 // Array of chat msg functions
@@ -80,37 +60,30 @@ socket.on("disconnect", function() {
    }, 10000);
 });
 
+// Time state for bot (for functions with cooldowns)
+const timeState = {};
+
 // Creates and sends a chat message event the server is listening to
 // message = message to be sent
+timeState.currentChatTime = 0;
 function chat(message) {
-   socket.emit("chatMsg", {
-      msg: message,
-      meta: {}
-   });
-}
-
-// BASIC COMMANDS - "botcode"s are chat filters in the channel
-function commands(data) {
-   if (data.msg.indexOf("!commands") !== -1) {
-      chat("botcodecommands");
+   let newTime = new Date().getTime();
+   // 10 ms cooldown so bot doesn't chat several messages at once and get kicked by cytube
+   if (newTime - timeState.currentChatTime > 10) { 
+      socket.emit("chatMsg", {
+         msg: message,
+         meta: {}
+      });
+      timeState.currentChatTime = newTime;
    }
 }
 
-// Replies for the ask function
-const replies = ["It is certain AlizeeHahaa2", "It is decidedly so AlizeeHahaa2", 
-   "Without a doubt AlizeeHahaa2", "Yes definitely AlizeeHahaa2", 
-   "You may rely on it AlizeeHahaa2", "As I see it, yes AlizeeOui", 
-   "Most likely AlizeeOui", "Outlook good AlizeeOui", "Signs point to yes AlizeeOui", 
-   "Reply hazy, try again AlizeeHmm", "Ask again later AlizeeHmm", 
-   "Better not tell you now AlizeeWink", "Cannot predict now AlizeeHmm", 
-   "Concentrate and ask again AlizeeOui2", "No AlizeeNo2", "My reply is no AlizeeNo2", 
-   "My sources say no AlizeeNo2", "Outlook not so good AlizeeNo2", 
-   "Very doubtful AlizeeNo2", "If Alizee wills it AlizeeBless", 
-   "Alizee wills it so AlizeeBless", "If you !roll 100 above 50 AlizeeBless"];
-
-function ask(data) {
-   if (data.msg.startsWith("!ask ")) {
-      chat(data.username + ": " + replies[Math.floor(Math.random() * replies.length)]);
+// ************** BASIC COMMANDS *************
+// "botcode"s are chat filters in the channel.
+// *******************************************
+function commands(data) {
+   if (data.msg.indexOf("!commands") !== -1) {
+      chat("botcodecommands");
    }
 }
 
@@ -204,6 +177,34 @@ function alizeeBible(data) {
    }
 }
 
+// ***************************************** ASK *****************************************
+// Gives a random reply to a question that starts with !ask. Replies 0-2 invoke a cooldown
+// ***************************************************************************************
+const replies = ["Reply hazy, try again later AlizeeHmm", "Ask again later AlizeeHmm", 
+   "Cannot predict now, ask later AlizeeHmm", "Concentrate and ask again AlizeeOui2", 
+   "You don't wanna know AlizeeWink", "It is certain AlizeeHahaa2", 
+   "It is decidedly so AlizeeHahaa2", "Without a doubt AlizeeHahaa2", 
+   "Yes definitely AlizeeHahaa2", "You may rely on it AlizeeHahaa2", 
+   "As I see it, yes AlizeeOui", "Most likely AlizeeOui", "Outlook good AlizeeOui", 
+   "Signs point to yes AlizeeOui", "No AlizeeNo2", "My reply is no AlizeeNo2", 
+   "My sources say no AlizeeNo2", "Outlook not so good AlizeeNo2", 
+   "Very doubtful AlizeeNo2", "If Alizee wills it AlizeeBless", 
+   "Alizee wills it so AlizeeBless", "If you !roll 100 above 50 AlizeeBless"];
+   
+timeState.currentAskTime = 0;
+function ask(data) {
+   if (data.msg.startsWith("!ask ")) {
+      let newTime = new Date().getTime();
+      if (newTime - timeState.currentAskTime > 30000) { 
+         const replyIndex = Math.floor(Math.random() * replies.length);
+         chat(data.username + ": " + replies[replyIndex]);
+         if (replyIndex <= 2) {
+            timeState.currentAskTime = newTime;
+         } 
+      }      
+   }
+}
+
 // Rolls a random number from 1 to a specified positive upper limit
 function roll(data) {
    const upperLimit = data.msg.split(/\s+/g)[1];
@@ -221,9 +222,9 @@ function roll(data) {
    }
 }
 
-// DATE ALERTS
-// Checks every hour if the current time is 8 GMT on a special date.
-// If so, gives an anniversary alert through a poll. Requires bot to have mod  
+// ************************** DATE ALERTS **************************
+// Gives anniversary alerts through a poll. Requires bot to have mod
+// *****************************************************************   
 const dates = [{"date": "Alizee was born", "m": 8, "d": 21, "y": 1984},
 {"date": "The Gourmandises album was released", "m": 11, "d": 21, "y": 2000},
 {"date": "Moi Lolita was released", "m": 7, "d": 4, "y": 2000},
@@ -264,21 +265,27 @@ setInterval(function() {
    }
 }, 3600000);
 
-// ALIZEE COUNTER
+// **************************** ALIZEE COUNTER ****************************
 // Reads a github gist to get launch date and the count of Alizee mentions.
+// ************************************************************************
+const countState = {
+   count: 0,
+   launchDate: ""
+};
+
 axios.get("https://api.github.com/gists/" + config.gist.fileID)
 .then(function(response) {
-   state.launchDate = response.data.files.launchdate.content;
-   state.count = parseInt(response.data.files.alizeecount.content, 10);
+   countState.launchDate = response.data.files.launchdate.content;
+   countState.count = parseInt(response.data.files.alizeecount.content, 10);
 });
 
 function counter(data) {
    if (data.msg.indexOf("alizee") !== -1 || data.msg.indexOf("alizbae") !== -1 ||
        data.msg.indexOf("fastcarz") !== -1 || data.msg.indexOf("alulzee") !== -1 ||
        data.msg.indexOf("mlolita") !== -1 || data.msg.indexOf("lili") !== -1) {
-      state.count++;
-      if (state.count % 500 === 0) {
-         chat("Alizee mention milestone: " + state.count + "! AlizeeYay");
+      countState.count++;
+      if (countState.count % 500 === 0) {
+         chat("Alizee mention milestone: " + countState.count + "! AlizeeYay");
       }
    }
 }
@@ -300,11 +307,15 @@ process.on('uncaughtException', function(e) {
 
 // Edits "alizeecount" gist with new count and then exits.
 function saveCountAndExit() {
-   console.log("Saving Alizee count to gist...");
+   console.log("\nSaving Alizee count to gist...");
+   const gists = new Gists({
+      username: config.gist.username,
+      password: config.gist.password
+   });
    const options = {
       "files": {
          "alizeecount": {
-            "content": "" + state.count,
+            "content": "" + countState.count,
          }
       }
    }
@@ -317,17 +328,19 @@ function saveCountAndExit() {
 function countReport(data) {
    if (data.msg.indexOf("!count") !== -1) {
       chat("Alizee has been mentioned or had Her emotes used in `" +
-           state.count + "` messages since " + state.launchDate + " AlizeeOP");
+           countState.count + "` messages since " + countState.launchDate + " AlizeeOP");
    }
 }
 
-// RANDOM SONGS
-// Queues a random song to cytube playlist from pastebin list of songs
+// *************************** RANDOM SONGS ***************************
+// Queues a random song to cytube playlist from pastebin list of songs.
+// ********************************************************************
+timeState.currentSongTime = 0;
 function randomSong(data) {
    if (data.msg.indexOf("!randomsong") !== -1) {
       let newTime = new Date().getTime();
-      if (newTime - state.currentSongTime > 3000) { // 3 sec cooldown for random song command
-         state.currentSongTime = newTime;
+      if (newTime - timeState.currentSongTime > 3000) { // 3 sec cooldown for random song command
+         timeState.currentSongTime = newTime;
          axios.get("https://pastebin.com/raw/cKP5MA5K")
          .then(function(response) {
             const index = Math.floor(Math.random() * (response.data.videos.length));
@@ -342,14 +355,15 @@ function randomSong(data) {
    }
 }
 
-// WEATHER
-// Informs user of the temperature and weather in a given location.
-// Bot gives error message if location isn't readable.
+// *************************** WEATHER ***************************
+// Informs user of the temperature and weather in a given location
+// ***************************************************************
+timeState.currentWeatherTime = 0;
 function getWeather(data) {
    if (data.msg.startsWith("!weather ")) {
       let newTime = new Date().getTime();
-      if (newTime - state.currentWeatherTime > 5000) { // 5 second cooldown for weather requests
-         state.currentWeatherTime = newTime;
+      if (newTime - timeState.currentWeatherTime > 5000) { // 5 second cooldown for weather requests
+         timeState.currentWeatherTime = newTime;
          const city = data.msg.substring(9);
          axios.get("http://api.openweathermap.org/data/2.5/weather?q=" + city + 
                    "&APPID=" + config.openweathermapKey)
@@ -361,7 +375,7 @@ function getWeather(data) {
             chat(place + ", is currently " + temperatureF + 
                  " F (" + temperatureC + " C) with " + weather + " AlizeeOP");
          })
-         .catch(function(error) {
+         .catch(function(error) { // error message if location isn't readable.
             if (error.response.status === 404) {
                chat("Invalid city name. Try again AlizeeFail");
             }
@@ -370,9 +384,9 @@ function getWeather(data) {
    }
 }
 
-// ALARM
-// Allows users to create an alarm that will alert them when specified time has elapsed.
-// When new alarms are created, previous alarms for the given user are overriden
+// ***************************** ALARM *****************************
+// Create an alarm that alerts user when specified time has elapsed.
+// *****************************************************************
 const alarmUsers = [];
 function alarm(data) {
    if (data.msg.startsWith("!alarm ")) {
@@ -387,7 +401,7 @@ function alarm(data) {
          
          for (let i = 0; i < alarmUsers.length; i++) {
             if (data.username === alarmUsers[i].name) {
-               clearTimeout(alarmUsers[i].currentAlarm);
+               clearTimeout(alarmUsers[i].currentAlarm); // override previous alarms from user
                chat(data.username + ": Overriding your previous alarms and setting alarm for (*" 
                     + days + "*d *" + hours + "*h *" + mins + "*m *" + seconds + "*s) AlizeeOP");
                alarmUsers[i].currentAlarm = setTimeout(function(){
@@ -412,9 +426,9 @@ function checkForAlarmUser(user) {
 }
 
 
-// TWITCH STUFF
-// Checks every 90 sec if any of the streamers from the array of streamers are live.
-// If so, bot queues the streamer and gives an alert message
+// ****************************** TWITCH STUFF ******************************
+// Checks every 90 sec if any of the streamers are live then queues live ones
+// **************************************************************************
 const streamers = [{"name": "RajjPatel", "live": false}, 
    {"name": "Trainwreckstv", "live": false}, 
    {"name": "Howeh", "live": false}, 
@@ -444,31 +458,39 @@ setInterval(function() {
    }
 }, 90000);
 
-// TRIVIA
+// **************************************** TRIVIA ****************************************
 // Plays trivia games with the user. Users type !trivia to begin round. The user may skip 
 // to the next question (lose 50 pts) or win by typing the correct answer. (earn 100 pts)
-// When user gets the right answer, round ends and new question is generated for next round. 
-const players = [];
+// When user gets the right answer, round ends and new question is generated for next round
+// **************************************************************************************** 
+const trivia = {
+   playGame: false,
+   questionNum: 0,
+   currentQuestion: "",
+   currentAnswer: "",
+   questionsLength: 0,
+   players: []
+};
 
 function playTrivia(data) {
    if (data.msg.indexOf("!trivia") !== -1) {
-      if (state.playGame) {
-         chat("Current question: " + state.currentQuestion + " (!skip deducts 50 points)");
+      if (trivia.playGame) {
+         chat("Current question: " + trivia.currentQuestion + " (!skip deducts 50 points)");
       } else {
-         state.playGame = true;
+         trivia.playGame = true;
          getQuestion();
       } 
-   } else if (state.playGame && (data.msg.indexOf(state.currentAnswer) !== -1 || 
+   } else if (trivia.playGame && (data.msg.indexOf(trivia.currentAnswer) !== -1 || 
               data.msg.indexOf("!skip") !== -1)) {
       checkForPlayer(data.username);
-      state.questionNum++;
-      if (state.questionNum === state.questionsLength) {
-         state.questionNum = 0;
+      trivia.questionNum++;
+      if (trivia.questionNum === trivia.questionsLength) {
+         trivia.questionNum = 0;
       }
-      if (data.msg.indexOf(state.currentAnswer) !== -1) {
+      if (data.msg.indexOf(trivia.currentAnswer) !== -1) {
          adjustPoints(data.username, 100);
          chat(data.username + " answered correctly and earned 100 points AlizeeHaHAA");
-         state.playGame = false;
+         trivia.playGame = false;
       } else if (data.msg.indexOf("!skip") !== -1) {
          adjustPoints(data.username, -50);
          chat(data.username + " skipped current question and lost 50 points AlizeePupp");
@@ -480,29 +502,29 @@ function playTrivia(data) {
 function getQuestion() {
    axios.get("https://pastebin.com/raw/epvEFdgD")
    .then(function(response) {
-      state.currentQuestion = response.data.questions[state.questionNum].q;
-      state.currentAnswer = response.data.questions[state.questionNum].a;
-      state.questionsLength = response.data.questions.length;
-      chat(state.currentQuestion + " AlizeeHmm (100 pts for correct answer, -50 pts if skipped)");
+      trivia.currentQuestion = response.data.questions[trivia.questionNum].q;
+      trivia.currentAnswer = response.data.questions[trivia.questionNum].a;
+      trivia.questionsLength = response.data.questions.length;
+      chat(trivia.currentQuestion + " AlizeeHmm (100 pts for correct answer, -50 pts if skipped)");
    });
 }
 
 // adds user to players array if they are not in it yet
 function checkForPlayer(currentPlayer) {
-   for (let i = 0; i < players.length; i++) {
-      if (currentPlayer === players[i].name) {
+   for (let i = 0; i < trivia.players.length; i++) {
+      if (currentPlayer === trivia.players[i].name) {
          return;
       }
    }
-   players.push({"name": currentPlayer, "score": 0});
+   trivia.players.push({"name": currentPlayer, "score": 0});
 }
 
 function adjustPoints(currentPlayer, pointAdjustment) {
-   for (let i = 0; i < players.length; i++) {
-      if (players[i].name === currentPlayer) {
-         players[i].score += pointAdjustment;
-         if (players[i].score < 0) {
-            players[i].score = 0;
+   for (let i = 0; i < trivia.players.length; i++) {
+      if (trivia.players[i].name === currentPlayer) {
+         trivia.players[i].score += pointAdjustment;
+         if (trivia.players[i].score < 0) {
+            trivia.players[i].score = 0;
          }
       }
    }
@@ -510,10 +532,11 @@ function adjustPoints(currentPlayer, pointAdjustment) {
 
 function points(data) {
    if (data.msg.indexOf("!points") !== -1) {
-      if (players.length > 0) {
-         let scoreboard = "Trivia Points - " + players[0].name + ": " + players[0].score + " pts";
-         for (let i = 1; i < players.length; i++) {
-            scoreboard += ", " + players[i].name + ": " + players[i].score + " pts"
+      if (trivia.players.length > 0) {
+         let scoreboard = "Trivia Points - " + trivia.players[0].name + ": " + 
+            trivia.players[0].score + " pts";
+         for (let i = 1; i < trivia.players.length; i++) {
+            scoreboard += ", " + trivia.players[i].name + ": " + trivia.players[i].score + " pts"
          }
          chat(scoreboard);
       } else {
@@ -522,7 +545,9 @@ function points(data) {
    }
 }
 
-// CONVERT METRIC/IMPERIAL 
+// *********** CONVERT METRIC/IMPERIAL ***********
+// Converts quantities between metric and imperial
+// ***********************************************
 const conversions = [{"metric": "cm", "imperial": "in"},
    {"metric": "m", "imperial": "ft"},
    {"metric": "km", "imperial": "mi"},
