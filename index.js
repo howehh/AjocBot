@@ -60,23 +60,32 @@ socket.on("disconnect", function() {
    }, 10000);
 });
 
-// Time state for bot (for functions with cooldowns)
-const timeState = {};
-
 // Creates and sends a chat message event the server is listening to
 // message = message to be sent
-timeState.currentChatTime = 0;
+let currentChatTime = 0;
 function chat(message) {
    let newTime = new Date().getTime();
    // 10 ms cooldown so bot doesn't chat several messages at once and get kicked by cytube
-   if (newTime - timeState.currentChatTime > 10) { 
+   if (newTime - currentChatTime > 10) { 
       socket.emit("chatMsg", {
          msg: message,
          meta: {}
       });
-      timeState.currentChatTime = newTime;
+      currentChatTime = newTime;
    }
 }
+
+// removes a function from chatMsgEvents array, then adds it back after the given duration
+function cooldown(funcToPause, duration) {
+   for (let i = chatMsgEvents.length - 1; i >= 0; i--) {
+      if(chatMsgEvents[i] === funcToPause) {
+         chatMsgEvents.splice(i, 1); 
+         setTimeout(function(){
+            chatMsgEvents.push(funcToPause); 
+         }, duration);
+      }
+   }
+}   
 
 // ************** BASIC COMMANDS *************
 // "botcode"s are chat filters in the channel.
@@ -191,17 +200,13 @@ const replies = ["Reply hazy, try again later AlizeeHmm", "Ask again later Alize
    "Very doubtful AlizeeNo2", "If Alizee wills it AlizeeBless", 
    "Alizee wills it so AlizeeBless", "If you !roll 100 above 50 AlizeeBless"];
    
-timeState.currentAskTime = 0;
 function ask(data) {
    if (data.msg.startsWith("!ask ")) {
-      let newTime = new Date().getTime();
-      if (newTime - timeState.currentAskTime > 30000) { 
-         const replyIndex = Math.floor(Math.random() * replies.length);
-         chat(data.username + ": " + replies[replyIndex]);
-         if (replyIndex <= 2) {
-            timeState.currentAskTime = newTime;
-         } 
-      }      
+      const replyIndex = Math.floor(Math.random() * replies.length);
+      chat(data.username + ": " + replies[replyIndex]);
+      if (replyIndex <= 2) {
+         cooldown(ask, 30000);
+      } 
    }
 }
 
@@ -335,52 +340,44 @@ function countReport(data) {
 // *************************** RANDOM SONGS ***************************
 // Queues a random song to cytube playlist from pastebin list of songs.
 // ********************************************************************
-timeState.currentSongTime = 0;
 function randomSong(data) {
    if (data.msg.indexOf("!randomsong") !== -1) {
-      let newTime = new Date().getTime();
-      if (newTime - timeState.currentSongTime > 3000) { // 3 sec cooldown for random song command
-         timeState.currentSongTime = newTime;
-         axios.get("https://pastebin.com/raw/cKP5MA5K")
-         .then(function(response) {
-            const index = Math.floor(Math.random() * (response.data.videos.length));
-            socket.emit("queue", {
-               id: response.data.videos[index].url,
-               pos: "end",
-               type: "yt"
-            });
-            chat("Adding *'" + response.data.videos[index].name + "'* to queue! AlizeeOui2");
+      cooldown(randomSong, 3000);
+      axios.get("https://pastebin.com/raw/cKP5MA5K")
+      .then(function(response) {
+         const index = Math.floor(Math.random() * (response.data.videos.length));
+         socket.emit("queue", {
+            id: response.data.videos[index].url,
+            pos: "end",
+            type: "yt"
          });
-      }
+         chat("Adding *'" + response.data.videos[index].name + "'* to queue! AlizeeOui2");
+      });
    }
 }
 
 // *************************** WEATHER ***************************
 // Informs user of the temperature and weather in a given location
 // ***************************************************************
-timeState.currentWeatherTime = 0;
 function getWeather(data) {
-   if (data.msg.startsWith("!weather ")) {
-      let newTime = new Date().getTime();
-      if (newTime - timeState.currentWeatherTime > 5000) { // 5 second cooldown for weather requests
-         timeState.currentWeatherTime = newTime;
-         const city = data.msg.substring(9);
-         axios.get("http://api.openweathermap.org/data/2.5/weather?q=" + city + 
-                   "&APPID=" + config.openweathermapKey)
-         .then(function(response) {
-            const place = response.data.name + ", " + response.data.sys.country;
-            const temperatureF = Math.round(1.8 * (response.data.main.temp - 273) + 32);
-            const temperatureC = Math.round(response.data.main.temp - 273);
-            const weather = response.data.weather[0].description;
-            chat(place + ", is currently " + temperatureF + 
-                 " F (" + temperatureC + " C) with " + weather + " AlizeeOP");
-         })
-         .catch(function(error) { // error message if location isn't readable.
-            if (error.response.status === 404) {
-               chat("Invalid city name. Try again AlizeeFail");
-            }
-         });
-      }
+   if (data.msg.startsWith("!weather ")) { 
+      cooldown(getWeather, 5000);
+      const city = data.msg.substring(9);
+      axios.get("http://api.openweathermap.org/data/2.5/weather?q=" + city + 
+                "&APPID=" + config.openweathermapKey)
+      .then(function(response) {
+         const place = response.data.name + ", " + response.data.sys.country;
+         const temperatureF = Math.round(1.8 * (response.data.main.temp - 273) + 32);
+         const temperatureC = Math.round(response.data.main.temp - 273);
+         const weather = response.data.weather[0].description;
+         chat(place + ", is currently " + temperatureF + 
+              " F (" + temperatureC + " C) with " + weather + " AlizeeOP");
+      })
+      .catch(function(error) { // error message if location isn't readable.
+         if (error.response.status === 404) {
+            chat("Invalid city name. Try again AlizeeFail");
+         }
+      });
    }
 }
 
@@ -424,7 +421,6 @@ function checkForAlarmUser(user) {
    }
    alarmUsers.push({"name": user, "currentAlarm": undefined});
 }
-
 
 // ****************************** TWITCH STUFF ******************************
 // Checks every 90 sec if any of the streamers are live then queues live ones
