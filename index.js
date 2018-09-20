@@ -39,7 +39,7 @@ socket.on("login", (data) => {
 // Array of chat msg functions
 const chatMsgEvents = [commands, ask, hello, bye, nanu, thanks, fuckYou, alizee, rules,
    time, iq, funfriend, naysh, commandments, alizeeBible, roll, counter, countReport, 
-   randomSong, getWeather, alarm, playTrivia, points, convertUnits, units];
+   randomSong, getWeather, alarm, playTrivia, points, convertUnits, units, define];
 
 // On a chat message event, data is logged to console and sent to each chatMsgEvent function
 // Data is whatever data is given from chat msg event
@@ -53,14 +53,7 @@ socket.on("chatMsg", (data) => {
    chatMsgEvents.forEach(c => c(data));
 });
 
-// When bot disconnects, program automatically exits after 10 seconds
-socket.on("disconnect", function() {
-   setTimeout(function() {
-      saveCountAndExit();
-   }, 10000);
-});
-
-// Creates and sends a chat message event the server is listening to
+// Creates and sends a chat message
 // message = message to be sent
 let currentChatTime = 0;
 function chat(message) {
@@ -78,7 +71,7 @@ function chat(message) {
 // removes a function from chatMsgEvents array, then adds it back after the given duration
 function cooldown(funcToPause, duration) {
    for (let i = chatMsgEvents.length - 1; i >= 0; i--) {
-      if(chatMsgEvents[i] === funcToPause) {
+      if (chatMsgEvents[i] === funcToPause) {
          chatMsgEvents.splice(i, 1); 
          setTimeout(function(){
             chatMsgEvents.push(funcToPause); 
@@ -186,6 +179,23 @@ function alizeeBible(data) {
    }
 }
 
+// Rolls a random number from 1 to a specified positive upper limit
+function roll(data) {
+   const upperLimit = data.msg.split(/\s+/g)[1];
+   // Checks if message starts with !roll, if upperlimit is positive number
+   if (data.msg.startsWith("!roll ") && upperLimit.length > 0 &&
+       !isNaN(upperLimit) && upperLimit >= 0) {
+      const rollNum = Math.floor(Math.random() * upperLimit + 1);
+      chat(data.username + " rolls " + rollNum + " (1-" + upperLimit + ")");
+   } else if (data.msg.startsWith("!roll ") && data.msg.includes(upperLimit, 5) &&
+              (isNaN(upperLimit) || upperLimit < 0)) { // Invalid if number is negative or NaN
+      chat("Invalid input AlizeeFail");
+   } else if (data.msg.startsWith("!roll")) { // If command is simply !roll, roll from 1-100
+      const rollNum = Math.floor(Math.random() * 100 + 1);
+      chat(data.username + " rolls " + rollNum + " (1-100)");
+   }
+}
+
 // ***************************************** ASK *****************************************
 // Gives a random reply to a question that starts with !ask. Replies 0-2 invoke a cooldown
 // ***************************************************************************************
@@ -207,23 +217,6 @@ function ask(data) {
       if (replyIndex <= 2) {
          cooldown(ask, 30000);
       } 
-   }
-}
-
-// Rolls a random number from 1 to a specified positive upper limit
-function roll(data) {
-   const upperLimit = data.msg.split(/\s+/g)[1];
-   // Checks if message starts with !roll, if upperlimit is positive number
-   if (data.msg.startsWith("!roll ") && upperLimit.length > 0 &&
-       !isNaN(upperLimit) && upperLimit >= 0) {
-      const rollNum = Math.floor(Math.random() * upperLimit + 1);
-      chat(data.username + " rolls " + rollNum + " (1-" + upperLimit + ")");
-   } else if (data.msg.startsWith("!roll ") && data.msg.includes(upperLimit, 5) &&
-              (isNaN(upperLimit) || upperLimit < 0)) { // Invalid if number is negative or NaN
-      chat("Invalid input AlizeeFail");
-   } else if (data.msg.startsWith("!roll")) { // If command is simply !roll, roll from 1-100
-      const rollNum = Math.floor(Math.random() * 100 + 1);
-      chat(data.username + " rolls " + rollNum + " (1-100)");
    }
 }
 
@@ -295,6 +288,13 @@ function counter(data) {
    }
 }
 
+// On bot disconnecting, program automatically exits after 10 seconds
+socket.on("disconnect", function() {
+   setTimeout(function() {
+      saveCountAndExit();
+   }, 10000);
+});
+
 // On Ctrl+C'ing program, saves Alizee count then exits
 process.on('SIGINT', function () {
    saveCountAndExit();
@@ -332,7 +332,7 @@ function saveCountAndExit() {
 
 function countReport(data) {
    if (data.msg.indexOf("!count") !== -1) {
-      chat("Alizee has been mentioned or had Her emotes used in `" +
+      chat("Alizee has been mentioned or had her emotes used in `" +
            countState.count + "` messages since " + countState.launchDate + " AlizeeOP");
    }
 }
@@ -351,7 +351,7 @@ function randomSong(data) {
             pos: "end",
             type: "yt"
          });
-         chat("Adding *'" + response.data.videos[index].name + "'* to queue! AlizeeOui2");
+         chat("Queuing up *" + response.data.videos[index].name + "*! AlizeeOui2");
       });
    }
 }
@@ -375,7 +375,7 @@ function getWeather(data) {
       })
       .catch(function(error) { // error message if location isn't readable.
          if (error.response.status === 404) {
-            chat("Invalid city name. Try again AlizeeFail");
+            chat("Invalid city name. AlizeeFail");
          }
       });
    }
@@ -398,9 +398,9 @@ function alarm(data) {
          
          for (let i = 0; i < alarmUsers.length; i++) {
             if (data.username === alarmUsers[i].name) {
-               clearTimeout(alarmUsers[i].currentAlarm); // override previous alarms from user
-               chat(data.username + ": Overriding your previous alarms and setting alarm for (*" 
-                    + days + "*d *" + hours + "*h *" + mins + "*m *" + seconds + "*s) AlizeeOP");
+               clearTimeout(alarmUsers[i].currentAlarm); // override previous alarm from user
+               chat(data.username + ": Setting your new alarm for (*" + days + "*d *" + hours
+                  + "*h *" + mins + "*m *" + seconds + "*s) AlizeeOP");
                alarmUsers[i].currentAlarm = setTimeout(function(){
                   chat("YOUR ALARM FOR (*" + days + "*d *" + hours + "*h *" + mins + "*m *" 
                        + seconds + "*s) IS OVER " + data.username.toUpperCase() + " AlizeeREE");
@@ -427,7 +427,7 @@ function checkForAlarmUser(user) {
 // **************************************************************************
 const streamers = [{"name": "RajjPatel", "live": false}, 
    {"name": "Trainwreckstv", "live": false}, 
-   {"name": "Howeh", "live": false}, 
+   {"name": "xQcOW", "live": false}, 
    {"name": "Sodapoppin", "live": false}, 
    {"name": "Reckful", "live": false}, 
    {"name": "Greekgodx", "live": false},
@@ -441,7 +441,7 @@ setInterval(function() {
       .then(function(response) {
          if (response.data.stream !== null && !streamers[i].live) {
             streamers[i].live = true;
-            chat("Queued up " + streamers[i].name + "! AlizeeYay");
+            chat("Queued up " + streamers[i].name + "! alizBae");
             socket.emit("queue", {
                id: streamers[i].name.toLowerCase(),
                pos: "end",
@@ -485,11 +485,11 @@ function playTrivia(data) {
       }
       if (data.msg.indexOf(trivia.currentAnswer) !== -1) {
          adjustPoints(data.username, 100);
-         chat(data.username + " answered correctly and earned 100 points AlizeeHaHAA");
+         chat(data.username + " answered correctly and earned 100 points!");
          trivia.playGame = false;
       } else if (data.msg.indexOf("!skip") !== -1) {
          adjustPoints(data.username, -50);
-         chat(data.username + " skipped current question and lost 50 points AlizeePupp");
+         chat(data.username + " skipped current question and lost 50 points.");
          getQuestion();
       }
    }
@@ -501,7 +501,7 @@ function getQuestion() {
       trivia.currentQuestion = response.data.questions[trivia.questionNum].q;
       trivia.currentAnswer = response.data.questions[trivia.questionNum].a;
       trivia.questionsLength = response.data.questions.length;
-      chat(trivia.currentQuestion + " AlizeeHmm (100 pts for correct answer, -50 pts if skipped)");
+      chat(trivia.currentQuestion + " AlizeeHmm (100 pts if correct, -50 pts if skipped)");
    });
 }
 
@@ -536,7 +536,7 @@ function points(data) {
          }
          chat(scoreboard);
       } else {
-         chat("The trivia scoreboard is empty. Play !trivia to start AlizeeOui2");
+         chat("Trivia scoreboard is empty. Type !trivia to play AlizeeOui2");
       }
    }
 }
@@ -585,7 +585,7 @@ function convertUnits(data) {
          }
       }
       if (!valid) {
-         chat("I won't convert that. Format as one number followed by one valid unit keyword " +
+         chat("Invalid input. Format as one number followed by one valid unit keyword " +
               "listed under `!units` AlizeeNo");
       }
    } 
@@ -598,5 +598,33 @@ function units(data) {
          unitList += ", " + conversions[i].metric + ", " + conversions[i].imperial; 
       }
       chat(unitList);
+   }
+}
+
+// ********** DEFINE **********
+// Gives definitions of a word.
+// ****************************
+function define(data) {
+   if (data.msg.startsWith("!define ")) {
+      cooldown(define, 10000);
+      const term = encodeURI(data.msg.substring(8));
+      axios.get('https://od-api.oxforddictionaries.com/api/v1/entries/en/' + term, {
+         headers: {
+            "Accept": "application/json",
+            "app_id": config.dictionary.app_id,
+            "app_key": config.dictionary.app_key
+         }
+      })
+      .then(function (response) {
+         chat("*" + response.data.results[0].id + "* - " + 
+              response.data.results[0].lexicalEntries[0].entries[0].senses[0].definitions[0]);
+      })
+      .catch(function(error) { // error message if word can't be found.
+         if (error.response !== undefined) {
+            if (error.response.status === 404) {
+               chat("I can't define that AlizeeFail");
+            }
+         }
+      });
    }
 }
