@@ -11,5 +11,9 @@
       "fileID": ""
    },
    "openweathermapKey": "",
-   "twitchKey": ""
+   "twitchKey": "",
+   "dictionary": {
+      "app_id": "",
+      "app_key": "" 
+   }
 }   
