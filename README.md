@@ -14,5 +14,5 @@ Bot Usage Instructions in case I have amnesia:
    
 2. Install node and npm
 3. `cd` into AjocBot folder through command prompt
-4. `npm install` the node modules listed under package.json
+4. `npm install` to install the node module dependencies
 5. `node index.js` to run the bot
