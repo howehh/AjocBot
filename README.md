@@ -10,7 +10,8 @@ Bot Usage Instructions in case I have amnesia:
      - channel is the name of the cytube channel to connect to
      - gist username and password fields are login for github
      - openweathermapKey is API key from https://openweathermap.org/
-     - twitchKey is API key from twitch.tv<br>
+     - twitchKey is API key from twitch.tv
+     - dictionaryKey is API key from wordreference.com (keys no longer available so find it on black market)
    
 2. Install node and npm
 3. `cd` into AjocBot folder through command prompt
