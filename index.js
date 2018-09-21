@@ -606,25 +606,27 @@ function units(data) {
 // ****************************
 function define(data) {
    if (data.msg.startsWith("!define ")) {
-      cooldown(define, 10000);
-      const term = encodeURI(data.msg.substring(8));
-      axios.get('https://od-api.oxforddictionaries.com/api/v1/entries/en/' + term, {
-         headers: {
-            "Accept": "application/json",
-            "app_id": config.dictionary.app_id,
-            "app_key": config.dictionary.app_key
-         }
-      })
+      cooldown(define, 6000);
+      const term = data.msg.substring(8);
+      axios.get('https://api.wordreference.com/0.8/' + config.dictionaryKey + '/json/enfr/' + 
+                encodeURI(term))
       .then(function (response) {
-         chat("*" + response.data.results[0].id + "* - " + 
-              response.data.results[0].lexicalEntries[0].entries[0].senses[0].definitions[0]);
-      })
-      .catch(function(error) { // error message if word can't be found.
-         if (error.response !== undefined) {
-            if (error.response.status === 404) {
-               chat("I can't define that AlizeeFail");
+         if (response.data.term0 !== undefined) { // if definition can be found
+            const items = response.data.term0.PrincipalTranslations; // object of definitions
+            let definitions = "1. " + items["0"]["OriginalTerm"]["sense"]; // 1st definition
+            const arrayOfKeys = Object.keys(items); // "0", "1", "2", etc
+            for (let i = 1; i < Math.min(3, arrayOfKeys.length); i++) { // maximum of 3 defs
+               // add the rest of the definitions (/break is an AJOC chat filter for <br>)
+               definitions += "/break " + (i + 1) + ". " +
+                  items[arrayOfKeys[i]]["OriginalTerm"]["sense"];
             }
+            chat("*" + term + "* - " + definitions);
+         } else {
+            chat("I can't define that. AlizeeFail"); 
          }
+      })
+      .catch(function(error) {
+         console.log(error);
       });
    }
 }
