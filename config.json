@@ -12,8 +12,5 @@
    },
    "openweathermapKey": "",
    "twitchKey": "",
-   "dictionary": {
-      "app_id": "",
-      "app_key": "" 
-   }
+   "dictionaryKey": ""
 }   
