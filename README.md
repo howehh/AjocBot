@@ -8,10 +8,10 @@ Bot Usage Instructions in case I have amnesia:
      - Cytube username and password fields are login for bot
      - socketConnection is the URL you are connecting to (ex: https://zip.cytu.be:10443)
      - channel is the name of the cytube channel to connect to
-     - gist username and password fields are login for github
+     - gist username and password fields are login for github. fileID is the gist you want to read/edit
      - openweathermapKey is API key from https://openweathermap.org/
      - twitchKey is API key from twitch.tv
-     - dictionaryKey is API key from wordreference.com (keys no longer available so find it on black market)
+     - dictionary app_id and app_key from Oxford dictionary
    
 2. Install node and npm
 3. `cd` into AjocBot folder through command prompt
