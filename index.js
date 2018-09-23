@@ -68,7 +68,7 @@ function chat(message) {
    }
 }
 
-// removes a function from chatMsgEvents array, then adds it back after the given duration
+// removes a function from chatMsgEvents array, then adds it back after the given duration (ms)
 function cooldown(funcToPause, duration) {
    for (let i = chatMsgEvents.length - 1; i >= 0; i--) {
       if (chatMsgEvents[i] === funcToPause) {
@@ -332,8 +332,11 @@ function saveCountAndExit() {
 
 function countReport(data) {
    if (data.msg.indexOf("!count") !== -1) {
-      chat("Alizee has been mentioned or had her emotes used in `" +
-           countState.count + "` messages since " + countState.launchDate + " AlizeeOP");
+      const then = new Date(countState.launchDate);
+      const now = new Date();
+      const elapsedDays = parseInt((now.getTime() - then.getTime()) / 86400000, 10);
+      chat("Alizee has been mentioned or had her emotes used in `" + countState.count + 
+           "` messages since " + countState.launchDate + " (" + elapsedDays + " days ago) AlizeeOP");
    }
 }
 
@@ -395,12 +398,11 @@ function alarm(data) {
          const days = parseInt((ms / (1000 * 60 * 60 * 24)) % 24, 10);
          
          checkForAlarmUser(data.username);
-         
          for (let i = 0; i < alarmUsers.length; i++) {
             if (data.username === alarmUsers[i].name) {
                clearTimeout(alarmUsers[i].currentAlarm); // override previous alarm from user
                chat(data.username + ": Setting your new alarm for (*" + days + "*d *" + hours
-                  + "*h *" + mins + "*m *" + seconds + "*s) AlizeeOP");
+                    + "*h *" + mins + "*m *" + seconds + "*s) AlizeeOP");
                alarmUsers[i].currentAlarm = setTimeout(function(){
                   chat("YOUR ALARM FOR (*" + days + "*d *" + hours + "*h *" + mins + "*m *" 
                        + seconds + "*s) IS OVER " + data.username.toUpperCase() + " AlizeeREE");
@@ -431,8 +433,7 @@ const streamers = [{"name": "RajjPatel", "live": false},
    {"name": "Sodapoppin", "live": false}, 
    {"name": "Reckful", "live": false}, 
    {"name": "Greekgodx", "live": false},
-   {"name": "TriHardGodCx", "live": false},
-   {"name": "Barry74", "live": false}];
+   {"name": "TriHardGodCx", "live": false}];
 
 setInterval(function() {
    for (let i = 0; i < streamers.length; i++) {
@@ -471,7 +472,7 @@ const trivia = {
 function playTrivia(data) {
    if (data.msg.indexOf("!trivia") !== -1) {
       if (trivia.playGame) {
-         chat("Current question: " + trivia.currentQuestion + " (!skip deducts 50 points)");
+         chat("Current question: " + trivia.currentQuestion + " (!skip deducts 75 points)");
       } else {
          trivia.playGame = true;
          getQuestion();
@@ -488,8 +489,8 @@ function playTrivia(data) {
          chat(data.username + " answered correctly and earned 100 points!");
          trivia.playGame = false;
       } else if (data.msg.indexOf("!skip") !== -1) {
-         adjustPoints(data.username, -50);
-         chat(data.username + " skipped current question and lost 50 points.");
+         adjustPoints(data.username, -75);
+         chat(data.username + " skipped current question and lost 75 points.");
          getQuestion();
       }
    }
@@ -501,7 +502,7 @@ function getQuestion() {
       trivia.currentQuestion = response.data.questions[trivia.questionNum].q;
       trivia.currentAnswer = response.data.questions[trivia.questionNum].a;
       trivia.questionsLength = response.data.questions.length;
-      chat(trivia.currentQuestion + " AlizeeHmm (100 pts if correct, -50 pts if skipped)");
+      chat(trivia.currentQuestion + " AlizeeHmm (100 pts if correct, -75 pts if skipped)");
    });
 }
 
@@ -606,27 +607,33 @@ function units(data) {
 // ****************************
 function define(data) {
    if (data.msg.startsWith("!define ")) {
-      cooldown(define, 6000);
-      const term = data.msg.substring(8);
-      axios.get('https://api.wordreference.com/0.8/' + config.dictionaryKey + '/json/enfr/' + 
-                encodeURI(term))
-      .then(function (response) {
-         if (response.data.term0 !== undefined) { // if definition can be found
-            const items = response.data.term0.PrincipalTranslations; // object of definitions
-            let definitions = "1. " + items["0"]["OriginalTerm"]["sense"]; // 1st definition
-            const arrayOfKeys = Object.keys(items); // "0", "1", "2", etc
-            for (let i = 1; i < Math.min(3, arrayOfKeys.length); i++) { // maximum of 3 defs
-               // add the rest of the definitions (/break is an AJOC chat filter for <br>)
-               definitions += "/break " + (i + 1) + ". " +
-                  items[arrayOfKeys[i]]["OriginalTerm"]["sense"];
-            }
-            chat("*" + term + "* - " + definitions);
-         } else {
-            chat("I can't define that. AlizeeFail"); 
+      cooldown(define, 7000);
+      const term = data.msg.substring(8).trim(); // trimmed cuz white space interferes with get req
+      axios.get('https://od-api.oxforddictionaries.com/api/v1/entries/en/' + encodeURI(term), {
+         headers: {
+            "Accept": "application/json",
+            "app_id": config.dictionary.app_id,
+            "app_key": config.dictionary.app_key
          }
       })
-      .catch(function(error) {
-         console.log(error);
+      .then(function (response) {
+         let msg = "*" + response.data.results[0].id + "* -"; // msg begins with the word
+         const defs = response.data.results[0].lexicalEntries[0].entries[0].senses; // defs array
+         for (let i = 0; i < Math.min(3, defs.length); i++) { // adds maximum 3 defs to msg
+            if (defs[i].short_definitions !== undefined) { // if short def exists
+               msg += " " + (i + 1) + ". " + defs[i].short_definitions[0] + "/br/";
+            } else {
+               msg += " " + (i + 1) + ". " + defs[i].definitions[0] + "/br/";
+            }
+         }
+         chat(msg);
+      })
+      .catch(function(error) { // error message if word can't be found.
+         if (error.response !== undefined && error.response.status === 404) {
+            chat("I can't define that AlizeeFail");
+         } else {
+            console.log(error);
+         }
       });
    }
 }
