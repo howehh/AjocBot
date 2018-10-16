@@ -69,11 +69,11 @@ function chat(message) {
 }
 
 function pm(user, message) {
-	socket.emit("pm", {
-		to: user, 
-		msg: message, 
-		meta: {}
-	});
+   socket.emit("pm", {
+      to: user, 
+      msg: message, 
+      meta: {}
+   });
 }
 
 // removes a function from chatMsgEvents array, then adds it back after the given duration (ms)
@@ -369,25 +369,25 @@ function randomSong(data) {
 
 function specificSong(data) {
    if (data.msg.startsWith("!song ")) {
-		const songName = data.msg.substring(6).trim();
-		if (songName.length >= 3) {
-			axios.get("https://pastebin.com/raw/cKP5MA5K")
-			.then(function(response) {
-				for (let i = 0; i < response.data.videos.length; i++) {
-					if (response.data.videos[i].name.toLowerCase().indexOf(songName) !== -1) {
-						socket.emit("queue", {
-							id: response.data.videos[i].url,
-							pos: "end",
-							type: "yt"
-						});
-						chat("Queuing up *" + response.data.videos[i].name + "*! AlizeeOui2");
-						cooldown(specificSong, 3000);
-						return;
-					}
-				}
-				chat("Song not found AlizeeWtf Song list: https://pastebin.com/raw/2WnZvQBz");
-			});
-		}
+      const songName = data.msg.substring(6).trim();
+      if (songName.length >= 3) {
+         axios.get("https://pastebin.com/raw/cKP5MA5K")
+         .then(function(response) {
+            for (let i = 0; i < response.data.videos.length; i++) {
+               if (response.data.videos[i].name.toLowerCase().indexOf(songName) !== -1) {
+                  socket.emit("queue", {
+                     id: response.data.videos[i].url,
+                     pos: "end",
+                     type: "yt"
+                  });
+                  chat("Queuing up *" + response.data.videos[i].name + "*! AlizeeOui2");
+                  cooldown(specificSong, 3000);
+                  return;
+               }
+            }
+            chat("Song not found AlizeeWtf Song list: https://pastebin.com/raw/2WnZvQBz");
+         });
+      }
    }
 }
 
@@ -430,27 +430,27 @@ function alarm(data) {
          const days = parseInt((ms / (1000 * 60 * 60 * 24)) % 24, 10);
          
          checkForAlarmUser(data.username);
-		 
+       
          for (let i = 0; i < alarmUsers.length; i++) {
             if (data.username === alarmUsers[i].name) {
                clearTimeout(alarmUsers[i].currentAlarm); // override previous timeout for user
-			      clearInterval(alarmUsers[i].currentSpam); // stops any current spam
-					clearTimeout(alarmUsers[i].stopSpam); // clears any current spam timeout
+               clearInterval(alarmUsers[i].currentSpam); // stops any current spam
+               clearTimeout(alarmUsers[i].stopSpam); // clears any current spam timeout
                chat(data.username + ": I will spam whisper you in (*" + days + "*d *" 
-						  + hours + "*h *" + mins + "*m *" + seconds + "*s) AlizeeOP");
-					
+                    + hours + "*h *" + mins + "*m *" + seconds + "*s) AlizeeOP");
+               
                alarmUsers[i].currentAlarm = setTimeout(function(){ // sets new timeout
-			   
-						alarmUsers[i].currentSpam = setInterval(function() { // start spam after timeout
-							pm(alarmUsers[i].name, "YOUR ALARM FOR (*" + days + "*d *" + hours + "*h *"
-								+ mins + "*m *" + seconds + "*s) IS OVER AlizeeREE " 
-								+ "Type `STOP` to turn off. (Automatically stops after 1 min)");
-						}, 1000);
-						
-						alarmUsers[i].stopSpam = setTimeout(function() { // start timeout to stop spam
-							clearInterval(alarmUsers[i].currentSpam);
-						}, 60000);
-				  
+            
+                  alarmUsers[i].currentSpam = setInterval(function() { // start spam after timeout
+                     pm(alarmUsers[i].name, "YOUR ALARM FOR (*" + days + "*d *" + hours + "*h *"
+                        + mins + "*m *" + seconds + "*s) IS OVER AlizeeREE " 
+                        + "Type `STOP` to turn off. (Automatically stops after 1 min)");
+                  }, 1000);
+                  
+                  alarmUsers[i].stopSpam = setTimeout(function() { // start timeout to stop spam
+                     clearInterval(alarmUsers[i].currentSpam);
+                  }, 60000);
+              
                }, ms);
             }
          }
@@ -461,18 +461,18 @@ function alarm(data) {
 }
 
 socket.on("pm", (data) => {
-	if (data.username.toLowerCase() === botname) {
-		return;
-	}
-	if (data.msg.toLowerCase().indexOf("stop") !== -1) {
-		for (let i = 0; i < alarmUsers.length; i++) {
-			if (data.username === alarmUsers[i].name) { // finds name
-				if (alarmUsers[i].currentSpam !== null) { // if currently spamming
-					clearInterval(alarmUsers[i].currentSpam); // stop spamming
-				}
-			}
-		}
-	}
+   if (data.username.toLowerCase() === botname) {
+      return;
+   }
+   if (data.msg.toLowerCase().indexOf("stop") !== -1) {
+      for (let i = 0; i < alarmUsers.length; i++) {
+         if (data.username === alarmUsers[i].name) { // finds name
+            if (alarmUsers[i].currentSpam !== null) { // if currently spamming
+               clearInterval(alarmUsers[i].currentSpam); // stop spamming
+            }
+         }
+      }
+   }
 });
 
 function checkForAlarmUser(user) {
@@ -669,35 +669,35 @@ function define(data) {
    if (data.msg.startsWith("!define ")) {
       cooldown(define, 7000);
       const term = data.msg.substring(8).trim(); // trimmed cuz white space interferes with get req
-		if (encodeURI(term) === "alizee" || encodeURI(term) === "aliz%C3%A9e") {
-			chat("*alizee* - 1. perfection/br/ 2. unbelievably beautiful and sexy French Goddess");
-		} else {
-			axios.get('https://od-api.oxforddictionaries.com/api/v1/entries/en/' + encodeURI(term), {
-				headers: {
-					"Accept": "application/json",
-					"app_id": config.dictionary.app_id,
-					"app_key": config.dictionary.app_key
-				}
-			})
-			.then(function (response) {
-				let msg = "*" + response.data.results[0].id + "* -"; // msg begins with the word
-				const defs = response.data.results[0].lexicalEntries[0].entries[0].senses; // defs array
-				for (let i = 0; i < Math.min(3, defs.length); i++) { // adds maximum 3 defs to msg
-					if (defs[i].short_definitions !== undefined) { // if short def exists
-						msg += " " + (i + 1) + ". " + defs[i].short_definitions[0] + "/br/";
-					} else {
-						msg += " " + (i + 1) + ". " + defs[i].definitions[0] + "/br/";
-					}
-				}
-				chat(msg);
-			})
-			.catch(function(error) { // error message if word can't be found.
-				if (error.response !== undefined && error.response.status === 404) {
-					chat("I can't define that AlizeeFail");
-				} else {
-					console.log(error);
-				}
-			});
-		}
+      if (encodeURI(term) === "alizee" || encodeURI(term) === "aliz%C3%A9e") {
+         chat("*alizee* - 1. perfection/br/ 2. unbelievably beautiful and sexy French Goddess");
+      } else {
+         axios.get('https://od-api.oxforddictionaries.com/api/v1/entries/en/' + encodeURI(term), {
+            headers: {
+               "Accept": "application/json",
+               "app_id": config.dictionary.app_id,
+               "app_key": config.dictionary.app_key
+            }
+         })
+         .then(function (response) {
+            let msg = "*" + response.data.results[0].id + "* -"; // msg begins with the word
+            const defs = response.data.results[0].lexicalEntries[0].entries[0].senses; // defs array
+            for (let i = 0; i < Math.min(3, defs.length); i++) { // adds maximum 3 defs to msg
+               if (defs[i].short_definitions !== undefined) { // if short def exists
+                  msg += " " + (i + 1) + ". " + defs[i].short_definitions[0] + "/br/";
+               } else {
+                  msg += " " + (i + 1) + ". " + defs[i].definitions[0] + "/br/";
+               }
+            }
+            chat(msg);
+         })
+         .catch(function(error) { // error message if word can't be found.
+            if (error.response !== undefined && error.response.status === 404) {
+               chat("I can't define that AlizeeFail");
+            } else {
+               console.log(error);
+            }
+         });
+      }
    }
 }
