@@ -421,7 +421,7 @@ function getWeather(data) {
 // ***************************** ALARM *****************************
 // Create an alarm that alerts user when specified time has elapsed.
 // *****************************************************************
-const alarmUsers = [];
+const alarmUsers = new Map();
 function alarm(data) {
    if (data.msg.startsWith("!alarm ")) {
       const ms = parseDuration(data.msg.substring(7));
@@ -433,29 +433,23 @@ function alarm(data) {
          
          checkForAlarmUser(data.username);
        
-         for (let i = 0; i < alarmUsers.length; i++) {
-            if (data.username === alarmUsers[i].name) {
-               clearTimeout(alarmUsers[i].currentAlarm); // override previous timeout for user
-               clearInterval(alarmUsers[i].currentSpam); // stops any current spam
-               clearTimeout(alarmUsers[i].stopSpam); // clears any current spam timeout
-               chat(data.username + ": I will spam whisper you in (*" + days + "*d *" 
-                    + hours + "*h *" + mins + "*m *" + seconds + "*s) AlizeeOP");
-               
-               alarmUsers[i].currentAlarm = setTimeout(function(){ // sets new timeout
+         clearTimeout(alarmUsers.get(data.username).currentAlarm); // override previous timeout
+         clearInterval(alarmUsers.get(data.username).currentSpam); // stops any current spam
+         clearTimeout(alarmUsers.get(data.username).stopSpam); // clears any current spam timeout
+         chat(data.username + ": I will spam whisper you in (*" + days + "*d *" 
+              + hours + "*h *" + mins + "*m *" + seconds + "*s) AlizeeOP");
+         
+         alarmUsers.get(data.username).currentAlarm = setTimeout(function(){ // sets new timeout
+            alarmUsers.get(data.username).currentSpam = setInterval(function() { // start spam 
+               pm(data.username, "YOUR ALARM FOR (*" + days + "*d *" + hours + "*h *"
+                  + mins + "*m *" + seconds + "*s) IS OVER AlizeeREE " 
+                  + "Type `STOP` to turn off. (Automatically stops after 2 min)");
+            }, 1000);
             
-                  alarmUsers[i].currentSpam = setInterval(function() { // start spam after timeout
-                     pm(alarmUsers[i].name, "YOUR ALARM FOR (*" + days + "*d *" + hours + "*h *"
-                        + mins + "*m *" + seconds + "*s) IS OVER AlizeeREE " 
-                        + "Type `STOP` to turn off. (Automatically stops after 1 min)");
-                  }, 1000);
-                  
-                  alarmUsers[i].stopSpam = setTimeout(function() { // start timeout to stop spam
-                     clearInterval(alarmUsers[i].currentSpam);
-                  }, 60000);
-              
-               }, ms);
-            }
-         }
+            alarmUsers.get(data.username).stopSpam = setTimeout(function() { //timeout to stop spam
+               clearInterval(alarmUsers.get(data.username).currentSpam);
+            }, 120000);
+         }, ms);
       } else {
          chat("Invalid input. Duration must be between 1 second and 1 week AlizeeFail");
       }
@@ -467,23 +461,14 @@ socket.on("pm", (data) => {
       return;
    }
    if (data.msg.toLowerCase().indexOf("stop") !== -1) {
-      for (let i = 0; i < alarmUsers.length; i++) {
-         if (data.username === alarmUsers[i].name) { // finds name
-            if (alarmUsers[i].currentSpam !== null) { // if currently spamming
-               clearInterval(alarmUsers[i].currentSpam); // stop spamming
-            }
-         }
-      }
+      clearInterval(alarmUsers.get(data.username).currentSpam);
    }
 });
 
 function checkForAlarmUser(user) {
-   for (let i = 0; i < alarmUsers.length; i++) {
-      if (user === alarmUsers[i].name) {
-         return;
-      }
+   if (!alarmUsers.has(user)) {
+      alarmUsers.set(user, {"currentTimeout": null, "currentSpam": null, "stopSpam": null});
    }
-   alarmUsers.push({"name": user, "currentTimeout": null, "currentSpam": null, "stopSpam": null});
 }
 
 // ****************************** TWITCH STUFF ******************************
@@ -585,14 +570,11 @@ function adjustPoints(currentPlayer, pointAdjustment) {
 
 function points(data) {
    if (data.msg.indexOf("!points") !== -1) {
-      const keys = trivia.players.keys();
       if (trivia.players.size > 0) {
          let scoreboard = "Trivia Points - ";
-         let key = keys.next().value;
-         while (key !== undefined) {
-            scoreboard += key + ": " + trivia.players.get(key) + " pts. ";
-            key = keys.next().value;
-         }
+         trivia.players.forEach(function(points, player, map) {
+            scoreboard += player + ": " + points + " pts. ";
+         });
          chat(scoreboard);
       } else {
          chat("Trivia scoreboard is empty. Type !trivia to play AlizeeOui2");
