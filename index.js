@@ -387,6 +387,8 @@ function specificSong(data) {
             }
             chat("Song not found AlizeeWtf Song list: https://pastebin.com/raw/2WnZvQBz");
          });
+      } else {
+         chat("Need more information than that. AlizeeStare");
       }
    }
 }
@@ -526,7 +528,7 @@ const trivia = {
    currentQuestion: "",
    currentAnswer: "",
    questionsLength: 0,
-   players: []
+   players: new Map()
 };
 
 function playTrivia(data) {
@@ -568,32 +570,28 @@ function getQuestion() {
 
 // adds user to players array if they are not in it yet
 function checkForPlayer(currentPlayer) {
-   for (let i = 0; i < trivia.players.length; i++) {
-      if (currentPlayer === trivia.players[i].name) {
-         return;
-      }
+   if (!trivia.players.has(currentPlayer)) {
+      trivia.players.set(currentPlayer, 0);
    }
-   trivia.players.push({"name": currentPlayer, "score": 0});
 }
 
 function adjustPoints(currentPlayer, pointAdjustment) {
-   for (let i = 0; i < trivia.players.length; i++) {
-      if (trivia.players[i].name === currentPlayer) {
-         trivia.players[i].score += pointAdjustment;
-         if (trivia.players[i].score < 0) {
-            trivia.players[i].score = 0;
-         }
-      }
+   let newScore = trivia.players.get(currentPlayer) + pointAdjustment;
+   if (newScore < 0) {
+      newScore = 0;
    }
+   trivia.players.set(currentPlayer, newScore);
 }
 
 function points(data) {
    if (data.msg.indexOf("!points") !== -1) {
-      if (trivia.players.length > 0) {
-         let scoreboard = "Trivia Points - " + trivia.players[0].name + ": " + 
-            trivia.players[0].score + " pts";
-         for (let i = 1; i < trivia.players.length; i++) {
-            scoreboard += ", " + trivia.players[i].name + ": " + trivia.players[i].score + " pts"
+      const keys = trivia.players.keys();
+      if (trivia.players.size > 0) {
+         let scoreboard = "Trivia Points - ";
+         let key = keys.next().value;
+         while (key !== undefined) {
+            scoreboard += key + ": " + trivia.players.get(key) + " pts. ";
+            key = keys.next().value;
          }
          chat(scoreboard);
       } else {
@@ -619,7 +617,6 @@ function convertUnits(data) {
       const tokens = data.msg.split(/\s+/g);
       const amount = tokens[1];
       const unit = tokens[2];
-      let valid = false;
       if (tokens.length >= 3 && !isNaN(amount)) {
          for (let i = 0; i < conversions.length; i++) { // traverse through conversions array
             for (let j = 0; j < 2; j++) { // traverse through the 2 units in each element in array
@@ -627,7 +624,6 @@ function convertUnits(data) {
                let unitInObject = conversions[i][Object.keys(conversions[i])[j]];
                let otherUnit = conversions[i][Object.keys(conversions[i])[Math.abs(j-1)]];
                if (unit.toUpperCase() === unitInObject.toUpperCase()) {
-                  valid = true;
                   if (otherUnit === "in") {
                      let inches = convert(amount).from(unitInObject).to(otherUnit).toFixed(2);
                      const feet = parseInt(inches / 12, 10);
@@ -641,14 +637,13 @@ function convertUnits(data) {
                      chat(convert(amount).from(unitInObject).to(otherUnit).toFixed(2) + 
                           " " + otherUnit);
                   }
+                  return;
                }
             }             
          }
       }
-      if (!valid) {
-         chat("Invalid input. Format as one number followed by one valid unit keyword " +
-              "listed under `!units` AlizeeNo");
-      }
+      chat("Invalid input. Format as one number followed by one valid unit keyword " +
+           "listed under `!units` AlizeeNo");
    } 
 }
 
