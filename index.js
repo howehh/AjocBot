@@ -460,7 +460,7 @@ socket.on("pm", (data) => {
    if (data.username.toLowerCase() === botname) {
       return;
    }
-   if (data.msg.toLowerCase().indexOf("stop") !== -1) {
+   if (data.msg.toLowerCase().indexOf("stop") !== -1 && alarmUsers.has(data.username)) {
       clearInterval(alarmUsers.get(data.username).currentSpam);
    }
 });
