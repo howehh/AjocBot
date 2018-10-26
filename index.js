@@ -76,7 +76,7 @@ function pm(user, message) {
    });
 }
 
-// removes a function from chatMsgEvents array, then adds it back after the given duration (ms)
+// removes a function from chatMsgEvents array, then adds it back after the given ms
 function cooldown(funcToPause, duration) {
    for (let i = chatMsgEvents.length - 1; i >= 0; i--) {
       if (chatMsgEvents[i] === funcToPause) {
@@ -431,22 +431,18 @@ function alarm(data) {
          const hours = parseInt((ms / (1000 * 60 * 60)) % 24, 10);
          const days = parseInt((ms / (1000 * 60 * 60 * 24)) % 24, 10);
          
-         checkForAlarmUser(data.username);
-       
-         clearTimeout(alarmUsers.get(data.username).currentAlarm); // override previous timeout
-         clearInterval(alarmUsers.get(data.username).currentSpam); // stops any current spam
-         clearTimeout(alarmUsers.get(data.username).stopSpam); // clears any current spam timeout
+         clearAlarms(data.username);
          chat(data.username + ": I will spam whisper you in (*" + days + "*d *" 
               + hours + "*h *" + mins + "*m *" + seconds + "*s) AlizeeOP");
          
-         alarmUsers.get(data.username).currentAlarm = setTimeout(function(){ // sets new timeout
+         alarmUsers.get(data.username).currentAlarm = setTimeout(function(){ // new timeout
             alarmUsers.get(data.username).currentSpam = setInterval(function() { // start spam 
                pm(data.username, "YOUR ALARM FOR (*" + days + "*d *" + hours + "*h *"
                   + mins + "*m *" + seconds + "*s) IS OVER AlizeeREE " 
-                  + "Type `STOP` to turn off. (Automatically stops after 2 min)");
+                  + "`Type anything to turn off.` (Automatically stops after 2 min)");
             }, 1000);
-            
-            alarmUsers.get(data.username).stopSpam = setTimeout(function() { //timeout to stop spam
+            // timeout to stop spam
+            alarmUsers.get(data.username).stopSpam = setTimeout(function() { 
                clearInterval(alarmUsers.get(data.username).currentSpam);
             }, 120000);
          }, ms);
@@ -460,14 +456,18 @@ socket.on("pm", (data) => {
    if (data.username.toLowerCase() === botname) {
       return;
    }
-   if (data.msg.toLowerCase().indexOf("stop") !== -1 && alarmUsers.has(data.username)) {
+   if (alarmUsers.has(data.username)) {
       clearInterval(alarmUsers.get(data.username).currentSpam);
    }
 });
 
-function checkForAlarmUser(user) {
+function clearAlarms(user) {
    if (!alarmUsers.has(user)) {
       alarmUsers.set(user, {"currentTimeout": null, "currentSpam": null, "stopSpam": null});
+   } else {
+      clearTimeout(alarmUsers.get(user).currentAlarm); // override timeout
+      clearInterval(alarmUsers.get(user).currentSpam); // stops current spam
+      clearTimeout(alarmUsers.get(user).stopSpam); // clears any spam timeout
    }
 }
 
@@ -602,23 +602,11 @@ function convertUnits(data) {
       if (tokens.length >= 3 && !isNaN(amount)) {
          for (let i = 0; i < conversions.length; i++) { // traverse through conversions array
             for (let j = 0; j < 2; j++) { // traverse through the 2 units in each element in array
-               // unitInObject = the jth key in the ith element of the conversions array
-               let unitInObject = conversions[i][Object.keys(conversions[i])[j]];
+               // currentUnit = the jth key in the ith element of the conversions array
+               let currentUnit = conversions[i][Object.keys(conversions[i])[j]];
                let otherUnit = conversions[i][Object.keys(conversions[i])[Math.abs(j-1)]];
-               if (unit.toUpperCase() === unitInObject.toUpperCase()) {
-                  if (otherUnit === "in") {
-                     let inches = convert(amount).from(unitInObject).to(otherUnit).toFixed(2);
-                     const feet = parseInt(inches / 12, 10);
-                     if (feet === 0) {
-                        chat(inches + " in");
-                     } else {
-                        inches = (inches % 12).toFixed(1);
-                        chat(feet + "ft " + inches + " in");
-                     }
-                  } else {
-                     chat(convert(amount).from(unitInObject).to(otherUnit).toFixed(2) + 
-                          " " + otherUnit);
-                  }
+               if (unit.toUpperCase() === currentUnit.toUpperCase()) {
+                  chat(calculateConversion(amount, currentUnit, otherUnit));
                   return;
                }
             }             
@@ -627,6 +615,22 @@ function convertUnits(data) {
       chat("Invalid input. Format as one number followed by one valid unit keyword " +
            "listed under `!units` AlizeeNo");
    } 
+}
+
+function calculateConversion(amount, currentUnit, unitToConvertTo) {
+   if (unitToConvertTo === "in") {
+      let inches = convert(amount).from(currentUnit).to(unitToConvertTo).toFixed(2);
+      const feet = parseInt(inches / 12, 10);
+      if (feet === 0) {
+         return inches + " in";
+      } else {
+         inches = (inches % 12).toFixed(1);
+         return feet + "ft " + inches + " in";
+      }
+   } else {
+      return convert(amount).from(currentUnit).to(unitToConvertTo).toFixed(2) + 
+           " " + unitToConvertTo;
+   }
 }
 
 function units(data) {
@@ -645,9 +649,9 @@ function units(data) {
 function define(data) {
    if (data.msg.startsWith("!define ")) {
       cooldown(define, 7000);
-      const term = data.msg.substring(8).trim(); // trimmed cuz white space interferes with get req
+      const term = data.msg.substring(8).trim(); 
       if (encodeURI(term) === "alizee" || encodeURI(term) === "aliz%C3%A9e") {
-         chat("*alizee* - 1. perfection/br/ 2. unbelievably beautiful and sexy French Goddess");
+         chat("*alizee* - 1. perfection/br/ 2. unbelievably beautiful and sexy french goddess");
       } else {
          axios.get('https://od-api.oxforddictionaries.com/api/v1/entries/en/' + encodeURI(term), {
             headers: {
@@ -657,16 +661,7 @@ function define(data) {
             }
          })
          .then(function (response) {
-            let msg = "*" + response.data.results[0].id + "* -"; // msg begins with the word
-            const defs = response.data.results[0].lexicalEntries[0].entries[0].senses; // defs array
-            for (let i = 0; i < Math.min(3, defs.length); i++) { // adds maximum 3 defs to msg
-               if (defs[i].short_definitions !== undefined) { // if short def exists
-                  msg += " " + (i + 1) + ". " + defs[i].short_definitions[0] + "/br/";
-               } else {
-                  msg += " " + (i + 1) + ". " + defs[i].definitions[0] + "/br/";
-               }
-            }
-            chat(msg);
+            chat(getDefinitions(response));
          })
          .catch(function(error) { // error message if word can't be found.
             if (error.response !== undefined && error.response.status === 404) {
@@ -677,4 +672,17 @@ function define(data) {
          });
       }
    }
+}
+
+function getDefinitions(jsonResponse) {
+   let msg = "*" + jsonResponse.data.results[0].id + "* -"; // msg begins with the word
+   const defs = jsonResponse.data.results[0].lexicalEntries[0].entries[0].senses; 
+   for (let i = 0; i < Math.min(3, defs.length); i++) { // adds maximum 3 defs to msg
+      if (defs[i].short_definitions !== undefined) { // if short def exists
+         msg += " " + (i + 1) + ". " + defs[i].short_definitions[0] + "/br/";
+      } else {
+         msg += " " + (i + 1) + ". " + defs[i].definitions[0] + "/br/";
+      }
+   }
+   return msg;
 }
