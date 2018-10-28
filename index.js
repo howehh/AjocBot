@@ -37,9 +37,10 @@ socket.on("login", (data) => {
 });
 
 // Array of chat msg functions
-const chatMsgEvents = [commands, ask, hello, bye, nanu, thanks, fuckYou, alizee, rules,
-   time, iq, funfriend, naysh, commandments, alizeeBible, roll, counter, countReport, 
-   randomSong, specificSong, getWeather, alarm, playTrivia, points, convertUnits, units, define];
+const chatMsgEvents = [commands, ask, hello, bye, nanu, thanks, alizee, rules, 
+   time, iq, funfriend, naysh, commandments, alizeeBible, roll, counter, countReport,
+   randomSong, specificSong, getWeather, alarm, playTrivia, points, convertUnits,  
+   units, define, randomJoke];
 
 // On a chat message event, data is logged to console and sent to each chatMsgEvent function
 // Data is whatever data is given from chat msg event
@@ -129,12 +130,6 @@ function thanks(data) {
        data.msg.indexOf("merci " + botname) !== -1 || 
        data.msg.indexOf("ty " + botname) !== -1) {
       chat("You're welcome, " + data.username + " AlizeeHaHAA");
-   }
-}
-
-function fuckYou(data) {
-   if (data.msg.indexOf("fuck you " + botname) !== -1) {
-      chat("FUCK YOU " + data.username + " AlizeeRude");
    }
 }
 
@@ -296,7 +291,7 @@ function counter(data) {
    }
 }
 
-// On bot disconnecting, program automatically exits after 10 seconds
+// On bot disconnecting from cytube, program automatically exits after 10 seconds
 socket.on("disconnect", function() {
    setTimeout(function() {
       saveCountAndExit();
@@ -430,7 +425,6 @@ function alarm(data) {
          const mins = parseInt((ms / (1000 * 60)) % 60, 10);
          const hours = parseInt((ms / (1000 * 60 * 60)) % 24, 10);
          const days = parseInt((ms / (1000 * 60 * 60 * 24)) % 24, 10);
-         
          clearAlarms(data.username);
          chat(data.username + ": I will spam whisper you in (*" + days + "*d *" 
               + hours + "*h *" + mins + "*m *" + seconds + "*s) AlizeeOP");
@@ -526,7 +520,6 @@ function playTrivia(data) {
       } 
    } else if (trivia.playGame && (data.msg.indexOf(trivia.currentAnswer) !== -1 || 
               data.msg.indexOf("!skip") !== -1)) {
-      checkForPlayer(data.username);
       trivia.questionNum++;
       if (trivia.questionNum === trivia.questionsLength) {
          trivia.questionNum = 0;
@@ -539,6 +532,7 @@ function playTrivia(data) {
          adjustPoints(data.username, -75);
          chat(data.username + " skipped current question and lost 75 points.");
          getQuestion();
+         cooldown(playTrivia, 2000);
       }
    }
 }
@@ -553,14 +547,10 @@ function getQuestion() {
    });
 }
 
-// adds user to players array if they are not in it yet
-function checkForPlayer(currentPlayer) {
+function adjustPoints(currentPlayer, pointAdjustment) {
    if (!trivia.players.has(currentPlayer)) {
       trivia.players.set(currentPlayer, 0);
    }
-}
-
-function adjustPoints(currentPlayer, pointAdjustment) {
    let newScore = trivia.players.get(currentPlayer) + pointAdjustment;
    if (newScore < 0) {
       newScore = 0;
@@ -685,4 +675,16 @@ function getDefinitions(jsonResponse) {
       }
    }
    return msg;
+}
+
+// ***** RANDOM JOKE *****
+// Chats a random dad joke
+// ***********************
+function randomJoke(data) {
+   if (data.msg.indexOf("!randomjoke") !== -1) {
+      axios.get('https://icanhazdadjoke.com/slack')
+      .then(function (response) {
+         chat(response.data.attachments[0].text + " AlizeeLUL");
+      });
+   }
 }
