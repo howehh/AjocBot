@@ -40,7 +40,7 @@ socket.on("login", (data) => {
 const chatMsgEvents = [commands, ask, hello, bye, nanu, thanks, alizee, rules, 
    time, iq, funfriend, naysh, commandments, alizeeBible, roll, counter, countReport,
    randomSong, specificSong, getWeather, alarm, playTrivia, points, convertUnits,  
-   units, define, randomJoke];
+   units, define, randomJoke, streamerList];
 
 // On a chat message event, data is logged to console and sent to each chatMsgEvent function
 // Data is whatever data is given from chat msg event
@@ -52,6 +52,18 @@ socket.on("chatMsg", (data) => {
    }
    data.msg = data.msg.toLowerCase();
    chatMsgEvents.forEach(c => c(data));
+});
+
+// Whisper events towards the bot
+const whisperEvents = [refreshStreamers, stopAlarm];
+
+socket.on("pm", (data) => {
+   console.log(data);
+   if (data.username.toLowerCase() === botname) {
+      return;
+   }
+   data.msg = data.msg.toLowerCase();
+   whisperEvents.forEach(c => c(data));
 });
 
 // Creates and sends a chat message
@@ -446,14 +458,11 @@ function alarm(data) {
    }
 }
 
-socket.on("pm", (data) => {
-   if (data.username.toLowerCase() === botname) {
-      return;
-   }
+function stopAlarm(data) {
    if (alarmUsers.has(data.username)) {
       clearInterval(alarmUsers.get(data.username).currentSpam);
    }
-});
+}
 
 function clearAlarms(user) {
    if (!alarmUsers.has(user)) {
@@ -468,13 +477,39 @@ function clearAlarms(user) {
 // ****************************** TWITCH STUFF ******************************
 // Checks every 90 sec if any of the streamers are live then queues live ones
 // **************************************************************************
-const streamers = [{"name": "RajjPatel", "live": false}, 
-   {"name": "Trainwreckstv", "live": false}, 
-   {"name": "xQcOW", "live": false}, 
-   {"name": "Sodapoppin", "live": false}, 
-   {"name": "Reckful", "live": false}, 
-   {"name": "Greekgodx", "live": false},
-   {"name": "TriHardGodCx", "live": false}];
+let streamers = [];
+
+function getStreamers() {
+   streamers.splice(0, streamers.length);
+   axios.get("https://pastebin.com/raw/7bJU7bLJ")
+   .then(function(response) {
+      response.data.streamerStatuses.forEach(function(streamerStatus) {
+         streamers.push(streamerStatus);
+      });
+   });
+}
+getStreamers();
+
+function refreshStreamers(data) {
+   if (data.msg.startsWith("!refreshstreamers")) {
+      if (data.username === "howeh") {
+         pm(data.username, "Refreshing streamer list...");
+         getStreamers();
+      } else {
+         pm(data.username, "You do not have this permission AlizeeWeird");
+      }
+   }
+}
+
+function streamerList(data) {
+   if (data.msg.startsWith("!streamers")) {
+      let message = "Streamers on the auto-queue list: " + streamers[0].name;
+      for (let i = 1; i < streamers.length; i++) {
+         message += ", " + streamers[i].name;
+      }
+      chat(message);
+   }
+}
 
 setInterval(function() {
    for (let i = 0; i < streamers.length; i++) {
