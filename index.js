@@ -27,12 +27,11 @@ addChatEvents(require('./lib/songs'));
 addChatEvents(require('./lib/weather'));
 addChatEvents(require('./lib/convertunits'));
 addChatEvents(require('./lib/define'));
-chatMsgEvents.push(count.counter); // counts the Alizee mentions
-chatMsgEvents.push(count.countReport); // !count command
+chatMsgEvents.push(count.counter, count.countReport);
 chatMsgEvents.push(alarm.setAlarm);
 chatMsgEvents.push(stream.streamerList);
-chatMsgEvents.push(points.points); // !points command
-chatMsgEvents.push(points.playTrivia); // !trivia command
+chatMsgEvents.push(points.points, points.playTrivia, points.store, points.secretEmote, points.give,
+   points.addEmote); 
 
 function addChatEvents(obj) {
    Object.keys(obj).forEach(key => chatMsgEvents.push(obj[key]));
@@ -51,7 +50,10 @@ bot.socket.on("chatMsg", (data) => {
 // ********************************** PM HANDLER *********************************** 
 // On private message events, data is printed and sent to each whisperEvent function
 // *********************************************************************************
-const whisperEvents = [alarm.stopAlarm, stream.refreshStreamers]; 
+const whisperEvents = [];
+whisperEvents.push(alarm.stopAlarm);
+whisperEvents.push(stream.refreshStreamers); 
+whisperEvents.push(points.secretEmote, points.buySecretEmote, points.confirmSecretEmote);
 
 bot.socket.on("pm", (data) => {
    console.log(data);
@@ -61,7 +63,6 @@ bot.socket.on("pm", (data) => {
    data.msg = data.msg.toLowerCase();
    whisperEvents.forEach(c => c(data));
 });
-
 
 // ******************************** SHUTDOWN HANDLER **************************************
 // When the bot shuts down, relevant data (Alizee count and user points) is saved to a gist
