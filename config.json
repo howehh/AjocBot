@@ -16,5 +16,9 @@
    "dictionary": {
       "app_id": "",
       "app_key": ""
+   },
+   "pastes": {
+      "secret": "",
+      "triv": ""
    }
 }   
