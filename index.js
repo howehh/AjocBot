@@ -19,6 +19,7 @@ require('./lib/store');
 require('./lib/notifications');
 require('./lib/weather');
 require('./lib/songs');
+require('./lib/jinx');
 
 // ******************************** SHUTDOWN HANDLER **************************************
 // When the bot shuts down, relevant data (Alizee count and user points) is saved to a gist
