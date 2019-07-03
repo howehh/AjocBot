@@ -25,6 +25,21 @@ require('./lib/jinx');
 // When the bot shuts down, relevant data (Alizee count and user points) is saved to a gist
 // ****************************************************************************************
 function saveGistsAndExit() {
+   clearInterval(saveInterval);
+   saveGists(
+      function() {
+         console.log("\nSave successful.");
+         process.exit(0);
+      },
+      
+      function() {
+         console.log("\nExited without saving");
+         process.exit(0);
+      }
+   );
+}
+
+function saveGists(success, fail) {
    if (count.getCount() > 0 && points.getPointsMapSize() > 0) {
       console.log("\nSaving bot data to gist...");
       const gists = new Gists({
@@ -44,18 +59,14 @@ function saveGistsAndExit() {
             }
          }
       }
-      gists.edit(config.gist.fileID, options).then(() => {
-         console.log("\nSave successful.");
-         process.exit(0);
-      });
+      gists.edit(config.gist.fileID, options).then(success);
    } else {
-      console.log("\nExited without saving");
-      process.exit(0);
+      fail();
    }
 }
 
 // On bot disconnecting from cytube, program automatically exits after 10 seconds
-bot.socket.on("disconnect", () => setTimeout(saveGistsAndExit, 10000));
+bot.socket.on("disconnect", () => setTimeout(saveGistsAndExit, 5000));
 
 // On Ctrl+C'ing, closing cmd prompt, or terminating, saves Alizee count & points then exits
 ['SIGINT', 'SIGHUP', 'SIGTERM'].forEach(signal => process.on(signal, saveGistsAndExit));
@@ -66,3 +77,16 @@ process.on('uncaughtException', e => {
    console.log();
    saveGistsAndExit();
 });
+
+// Safeguard: every hour, save data
+const saveInterval = setInterval(function() {
+   saveGists(
+      function() { // success callback
+         console.log("\nSave successful.");
+      },
+      
+      function() { // fail callback
+         console.log("\nDid not save");
+      }
+   )
+}, 1800000);
