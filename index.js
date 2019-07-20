@@ -2,13 +2,13 @@
 // The main file for AjocBot that is ran in Node. It 
 // determines which modules are enabled for AjocBot
 // *************************************************
-const bot = require('./lib/bot');
+require('./lib/bot');
+require('./lib/shutdown');
 
-// Modules
-const shutdown = require('./lib/shutdown');
-const count = require('./lib/count');
-const points = require('./lib/points');
-const trivia = require('./lib/trivia');
+// Optional Modules
+require('./lib/count');
+require('./lib/points');
+require('./lib/trivia');
 require('./lib/alarm');
 require('./lib/basiccommands');
 require('./lib/convertunits');
