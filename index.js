@@ -11,7 +11,7 @@ function loadModules() {
 
    // Optional Modules
    require('./lib/count');
-   require('./lib/points');
+   require('./lib/pointsinterface');
    require('./lib/trivia');
    require('./lib/alarm');
    require('./lib/basiccommands');
