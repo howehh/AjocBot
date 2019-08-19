@@ -20,7 +20,7 @@ function loadModules() {
    require('./lib/define');
    require('./lib/store');
    require('./lib/notifications');
-   require('./lib/weather');
+   require('./lib/locations');
    require('./lib/songs');
    require('./lib/jinx');
 }
