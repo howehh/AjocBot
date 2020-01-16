@@ -4,10 +4,8 @@
       "password": "",
       "channel": ""
    },
-   "gist": {
-      "username": "",
-      "password": "",
-      "fileID": ""
+   "firestore": {
+      "id": ""
    },
    "geocodeKey": "",
    "openweathermapKey": "",
