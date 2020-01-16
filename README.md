@@ -11,6 +11,7 @@ Bot Usage Instructions in case I have amnesia:
      - geocodeKey is the API key for https://opencagedata.com/
      - openweathermapKey is API key from https://openweathermap.org/
      - twitchKey is API key from twitch.tv
+     - youtubeKey is API key for YouTube Data
      - dictionary app_id and app_key from Oxford dictionary
      - secret paste = pastebin ID for secret emotes, triv paste = pastebin ID for trivia questions
    
