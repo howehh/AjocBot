@@ -7,7 +7,7 @@ Bot Usage Instructions in case I have amnesia:
 
      - Username and password fields are login for bot
      - channel is the name of the channel to join
-     - gist username and password fields are login for github. fileID is the gist you want to read/edit
+     - firestore id is the id of your firestore project. Must also include a firestore.json keyfile in AjocBot directory
      - geocodeKey is the API key for https://opencagedata.com/
      - openweathermapKey is API key from https://openweathermap.org/
      - twitchKey is API key from twitch.tv
