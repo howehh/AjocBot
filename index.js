@@ -24,4 +24,5 @@ function loadModules() {
    require('./lib/songs');
    require('./lib/jinx');
    require('./lib/casino');
+   require('./lib/duel');
 }
